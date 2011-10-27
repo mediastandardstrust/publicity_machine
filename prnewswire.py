@@ -17,7 +17,7 @@ from store import Store
 # eg
 # "EAST PEORIA, Ill., Oct. 24, 2011 /PRNewswire/ -- "
 # "NUEVA YORK, 26 de octubre de 2011 /PRNewswire-HISPANIC PR WIRE/ --"
-dateline_pat = re.compile(r'(?P<location>.*?),\s*(?P<month>\w{3,})[.]?\s*(?P<day>\d{1,2}),\s*(?P<year>\d{4})\s*/(?P<wire>.*?)/\s*--\s*',re.DOTALL)
+dateline_pat = re.compile(r'^\s*(?P<location>.*?),\s*(?P<month>\w{3,})[.]?\s*(?P<day>\d{1,2}),\s*(?P<year>\d{4})\s*/(?P<wire>.*?)/\s*--\s*',re.MULTILINE)
 
 # eg "SOURCE blahcorp inc."
 source_pat = re.compile(r'^(?:SOURCE|FUENTE)\s+(?P<source>.*?)\s*$',re.MULTILINE)
@@ -81,12 +81,14 @@ def extract(html, url):
         month = util.lookup_month(m.group('month'))
         day = int(m.group('day'))
         pubdate = datetime.date(year,month,day)
+        location = m.group('location')
     else:
         # TODO: handle non-english dates
         pubdate = datetime.datetime.now()
+        location = u''
 
     out['date'] = int(time.mktime(pubdate.timetuple())*1000)
-
+    out['location'] = location
     return out
 
 
@@ -137,13 +139,12 @@ def main():
                     press_release = extract(html, url)
 
                     # encode text fields
-                    for f in ('url','title','company','text','language','topics'):
+                    for f in ('url','title','company','text','location','language','topics'):
                         press_release[f] = press_release[f].encode('utf-8')
                     store.add(press_release)
             except Exception as e:
                 logging.error("failed on %s: %s %s",url,e.__class__,e)
                 err_cnt += 1
-            break
     finally:
         store.save()
 
