@@ -8,7 +8,7 @@ import datetime
 import logging
 from optparse import OptionParser
 import feedparser
-
+import time
 
 from urllib2helpers import CacheHandler
 import util
@@ -26,6 +26,16 @@ source_pat = re.compile(r'^(?:SOURCE|FUENTE)\s+(?P<source>.*?)\s*$',re.MULTILINE
 cruft_sel = 'script, style, .newsreldettrans, .horizontalline, .clearboth, #dvWideRelease, #linktopagetop'
 
 
+
+# output fields:
+# url
+# date  - unix timestamp
+# title
+# company
+# text
+# topics    - comma-separated topics
+# location
+# language - 'en_us', 'fr', 'es' etc...
 def extract(html, url):
 
     out = {'url':url}
@@ -36,8 +46,10 @@ def extract(html, url):
     topics = set()
     topics_div = doc.cssselect('.col-1 .seo-h4-seemorereleases')[0]
     for a in topics_div.findall('a'):
-        topics.add(unicode(a.get('title')))
-    out['topics'] = topics
+        topic = unicode(a.get('title')).strip()
+        topic = re.sub(',','',topic)    # kill commas
+        topics.add(topic)
+    out['topics'] = u','.join(topics)
 
     # "<meta http-equiv='Content-Language' content='es'/>"
     lang_meta = doc.cssselect('meta[http-equiv="Content-Language"]')[0]
@@ -46,7 +58,6 @@ def extract(html, url):
     # use title to identify div containing main content text
     head = doc.cssselect('#dvHead')[0]
     main = head.getparent()
-
     out['title'] = unicode(head.text_content()).strip()
 
     # grab text
@@ -54,13 +65,14 @@ def extract(html, url):
     content = util.render_text(main)
     content = re.compile(r'[\t ]{1,}',re.DOTALL).sub(' ',content)
     content = re.compile(r'\s{2,}$',re.MULTILINE).sub('\n',content)
+    out['text'] = content
 
     # eg "SOURCE blahcorp inc."
     m = source_pat.search(content)
     if m:
-        out['source'] = m.group('source')
+        out['company'] = m.group('source')
     else:
-        out['source'] = None
+        out['company'] = u''
 
     # break up dateline
     m = dateline_pat.search(content)
@@ -68,15 +80,18 @@ def extract(html, url):
         year = int(m.group('year'))
         month = util.lookup_month(m.group('month'))
         day = int(m.group('day'))
-        out['pubdate'] = datetime.date(year,month,day)
+        pubdate = datetime.date(year,month,day)
     else:
-        out['pubdate'] = None
+        # TODO: handle non-english dates
+        pubdate = datetime.datetime.now()
 
-    return out 
+    out['date'] = int(time.mktime(pubdate.timetuple())*1000)
+
+    return out
 
 
 
-
+# TODO: factor out the structural stuff into a tidy base class
 def main():
     parser = OptionParser(usage="%prog: [options]")
     parser.add_option('-v', '--verbose', action='store_true')
@@ -88,34 +103,51 @@ def main():
         log_level = logging.DEBUG
     elif options.verbose:
         log_level = logging.INFO
-    logging.basicConfig(level=log_level, format='%(message)s')
+    logging.basicConfig(level=log_level)    #, format='%(message)s')
 
-    store = Store("prnewswire")
+    store = Store("prnewswire", doc_type=1)
 
-#    opener = urllib2.build_opener(CacheHandler(".cache"))
-#    urllib2.install_opener(opener)
+    opener = urllib2.build_opener(CacheHandler(".cache"))
+    urllib2.install_opener(opener)
 
     feed_url = "http://www.prnewswire.com/rss/all-news-releases-from-PR-newswire-news.rss"
 
-    logging.debug("fetching feed %s", feed_url)
+    logging.debug("read feed %s", feed_url)
     feed = feedparser.parse(feed_url)
     all_urls = [e.link for e in feed.entries]
+    # cull out ones we've got
     urls = [url for url in all_urls if not store.already_got(url)]
     logging.info("feed yields %d urls (%d are new)", len(all_urls),len(urls))
 
+    err_cnt = 0
     try:
 
         for url in urls:
-            if store.already_got(url):
-                logging.debug("got %s",url)
-            else:
-                logging.debug("fetch %s",url)
-                html = urllib2.urlopen(url).read()
-                press_release = extract(html, url)
-                store.add(press_release)
+            try:
+                if store.already_got(url):
+                    logging.debug("got %s",url)
+                else:
+                    logging.debug("fetch %s",url)
+                    response = urllib2.urlopen(url)
+                    html = response.read()
 
+                    # TODO: maybe just skip ones which redirect to other domains?
+                    if response.geturl() != url:
+                        logging.warning("Redirect detected %s => %s",url,response.geturl())
+                    press_release = extract(html, url)
+
+                    # encode text fields
+                    for f in ('url','title','company','text','language','topics'):
+                        press_release[f] = press_release[f].encode('utf-8')
+                    store.add(press_release)
+            except Exception as e:
+                logging.error("failed on %s: %s %s",url,e.__class__,e)
+                err_cnt += 1
+            break
     finally:
         store.save()
+
+
 
     #test_url = "http://www.prnewswire.com/news-releases/robert-gates-joins-federal-companies-as-general-counsel-and-vice-president-of-human-resources-132446423.html"
     # this one has tables of figures
