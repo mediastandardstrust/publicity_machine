@@ -7,10 +7,14 @@ import urllib
 import urllib2
 from pprint import pprint
 import base64
+import ConfigParser
 
 AUTOSAVE_THRESHOLD = 10
-USER="wronguser"
-PASS="pass"
+
+config = ConfigParser.ConfigParser()
+config.readfp(open('churnalism.cfg'))
+USER = config.get("DEFAULT",'user')
+PASS = config.get("DEFAULT",'pass')
 
 class Store:
     """
