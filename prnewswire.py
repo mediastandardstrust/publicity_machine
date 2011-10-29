@@ -22,9 +22,8 @@ dateline_pat = re.compile(r'^\s*(?P<location>.*?),\s*(?P<month>\w{3,})[.]?\s*(?P
 # eg "SOURCE blahcorp inc."
 source_pat = re.compile(r'^(?:SOURCE|FUENTE)\s+(?P<source>.*?)\s*$',re.MULTILINE)
 
-# cruft elements to strip before extracting text (don't forget the commas!)
-cruft_sel = 'script, style, .newsreldettrans, .horizontalline, .clearboth, #dvWideRelease, #linktopagetop'
-
+# cruft elements to strip before extracting text (if you add to this, DON'T FORGET THE COMMAS! :-)
+cruft_sel = 'table, script, style, .newsreldettrans, .horizontalline, .clearboth, #dvWideRelease, #linktopagetop'
 
 
 # output fields:
