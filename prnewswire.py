@@ -2,6 +2,7 @@
 
 import lxml.html
 import re
+import urllib
 import urllib2
 from pprint import pprint
 import datetime
@@ -26,6 +27,52 @@ source_pat = re.compile(r'^(?:SOURCE|FUENTE)\s+(?P<source>.*?)\s*$',re.MULTILINE
 cruft_sel = 'table, script, style, .newsreldettrans, .horizontalline, .clearboth, #dvWideRelease, #linktopagetop'
 
 
+
+def find_historical(year,month,day):
+    """ return a days worth of press release URLs from prnewswire """
+
+    # prnewswire lets you search backward from a particular date
+    # no rss though - so we have to scrape the html, page by page until we
+    # have a full days worth
+
+    found = []
+    page = 1    # increase as we go back in time
+    done = False
+    while not done:
+        params = {
+            'year': year,
+            'month': month,
+            'day': day,
+            'hour': 23,     # includes 23:00-00:00
+            'page': page
+            }
+    
+        list_url = "http://www.prnewswire.com/news-releases/news-releases-list/?" + urllib.urlencode(params)
+        html = urllib2.urlopen(list_url).read()
+
+        doc = lxml.html.fromstring(html)
+        doc.make_links_absolute(base_url=list_url)
+
+
+        for li in doc.cssselect("#ulNewsreleaseList>li"):
+            a = li.cssselect("a")[0]
+
+            dt = li.cssselect(".seo-h3-datetime")[0].text_content()
+            # cheesy hack to tell when we've done one day and have hit the next:
+            # the time field becomes a full date
+            if re.compile('\d{4}').search(dt):  # check for year
+                done = True
+                break
+
+            found.append(a.get('href'))
+
+        page += 1
+        if page > 200:
+            break
+
+    return found
+
+
 # output fields:
 # url
 # date  - unix timestamp
@@ -36,7 +83,7 @@ cruft_sel = 'table, script, style, .newsreldettrans, .horizontalline, .clearboth
 # location
 # language - 'en_us', 'fr', 'es' etc...
 def extract(html, url):
-
+    """ extract prnewswire press release data from a page of html """
     out = {'url':url}
 
     doc = lxml.html.fromstring(html)
@@ -94,6 +141,8 @@ def extract(html, url):
 
 # TODO: factor out the structural stuff into a tidy base class
 def main():
+
+
     parser = OptionParser(usage="%prog: [options]")
     parser.add_option('-v', '--verbose', action='store_true')
     parser.add_option('-d', '--debug', action='store_true')
