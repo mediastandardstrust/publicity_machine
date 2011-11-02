@@ -5,15 +5,17 @@ import re
 import urllib
 import urllib2
 from pprint import pprint
-import datetime
+from datetime import datetime,date,timedelta
 import logging
 from optparse import OptionParser
 import feedparser
 import time
+import sys
 
 from urllib2helpers import CacheHandler
 import util
 from store import Store,DummyStore
+import fuzzydate
 
 # eg
 # "EAST PEORIA, Ill., Oct. 24, 2011 /PRNewswire/ -- "
@@ -41,13 +43,14 @@ def find_historical(year,month,day):
     while not done:
         params = {
             'year': year,
-            'month': month,
+            'month': month-1,   # months are 0=indexed
             'day': day,
             'hour': 23,     # includes 23:00-00:00
             'page': page
             }
     
         list_url = "http://www.prnewswire.com/news-releases/news-releases-list/?" + urllib.urlencode(params)
+        logging.debug("fetch %s",list_url)
         html = urllib2.urlopen(list_url).read()
 
         doc = lxml.html.fromstring(html)
@@ -57,10 +60,10 @@ def find_historical(year,month,day):
         for li in doc.cssselect("#ulNewsreleaseList>li"):
             a = li.cssselect("a")[0]
 
-            dt = li.cssselect(".seo-h3-datetime")[0].text_content()
-            # cheesy hack to tell when we've done one day and have hit the next:
-            # the time field becomes a full date
-            if re.compile('\d{4}').search(dt):  # check for year
+            (dt,span) = fuzzydate.parse_date(li.cssselect(".seo-h3-datetime")[0].text_content())
+
+            # hit a new day?
+            if dt.year != year or dt.month != month or dt.day != day:
                 done = True
                 break
 
@@ -126,11 +129,11 @@ def extract(html, url):
         year = int(m.group('year'))
         month = util.lookup_month(m.group('month'))
         day = int(m.group('day'))
-        pubdate = datetime.date(year,month,day)
+        pubdate = date(year,month,day)
         location = m.group('location')
     else:
         # TODO: handle non-english dates
-        pubdate = datetime.datetime.now()
+        pubdate = datetime.now()
         location = u''
 
     out['date'] = int(time.mktime(pubdate.timetuple())*1000)
@@ -159,6 +162,9 @@ def main():
     parser.add_option('-d', '--debug', action='store_true')
     parser.add_option('-t', '--test', action='store_true', help="test only - don't send any documents to server")
     parser.add_option('-c', '--cache', action='store_true', help="cache downloaded data .cache dir (for repeated runs during test)")
+
+    parser.add_option('-r', '--range', action="store", dest="range", help="""grab press releases in date range (eg "2011-01-01..2011-01-05" or "2011-01-01" for a single day)""")
+
     (options, args) = parser.parse_args()
 
     log_level = logging.ERROR
@@ -167,6 +173,7 @@ def main():
     elif options.verbose:
         log_level = logging.INFO
     logging.basicConfig(level=log_level)    #, format='%(message)s')
+
 
     if options.test:
         store = DummyStore("prnewswire", doc_type=1)
@@ -178,8 +185,37 @@ def main():
         opener = urllib2.build_opener(CacheHandler(".cache"))
         urllib2.install_opener(opener)
 
-    all_urls = find_latest()
-    
+    if options.range:
+        # handle an historical range of days
+        day_pat = re.compile(r"^\s*(\d{4}-\d{2}-\d{2})\s*$")
+        m = day_pat.match(options.range)
+        if m:
+            day_from = datetime.strptime(m.group(1),'%Y-%m-%d').date()
+            day_to = day_from
+        else:
+            rng_pat = re.compile("^\s*(\d{4}-\d{2}-\d{2})[.][.](\d{4}-\d{2}-\d{2})\s*$")
+            m = rng_pat.match(options.range)
+            day_from = datetime.strptime(m.group(1),'%Y-%m-%d').date()
+            day_to = datetime.strptime(m.group(2),'%Y-%m-%d').date()
+
+        assert(day_from<=day_to)
+
+        day = day_from
+        while True:
+            logging.info("Processing %s", day)
+            urls = find_historical(day.year, day.month, day.day)
+            process_batch(store,urls)
+            day += timedelta(days=1)
+            if day > day_to:
+                break
+    else:
+        # no range - just do latest
+        urls = find_latest()
+        process_batch(store,urls)
+   
+
+
+def process_batch(store,all_urls):
     # cull out ones we've got
     urls = [url for url in all_urls if not store.already_got(url)]
     logging.info("feed yields %d urls (%d are new)", len(all_urls),len(urls))
