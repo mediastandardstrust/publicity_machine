@@ -20,7 +20,7 @@ PASS = config.get("DEFAULT",'pass')
 class DummyStore:
 
     def __init__(self,name,doc_type):
-        logging.warning("running against dummy store")
+        logging.info("running against dummy store")
         pass
 
     def save(self):

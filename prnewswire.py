@@ -139,6 +139,17 @@ def extract(html, url):
 
 
 
+def find_latest():
+    """ find latest set of press releases"""
+    feed_url = "http://www.prnewswire.com/rss/all-news-releases-from-PR-newswire-news.rss"
+
+    logging.debug("read feed %s", feed_url)
+    feed = feedparser.parse(feed_url)
+    all_urls = [e.link for e in feed.entries]
+    return all_urls
+
+
+
 # TODO: factor out the structural stuff into a tidy base class
 def main():
 
@@ -147,6 +158,7 @@ def main():
     parser.add_option('-v', '--verbose', action='store_true')
     parser.add_option('-d', '--debug', action='store_true')
     parser.add_option('-t', '--test', action='store_true', help="test only - don't send any documents to server")
+    parser.add_option('-c', '--cache', action='store_true', help="cache downloaded data .cache dir (for repeated runs during test)")
     (options, args) = parser.parse_args()
 
     log_level = logging.ERROR
@@ -161,14 +173,13 @@ def main():
     else:
         store = Store("prnewswire", doc_type=1)
 
-    opener = urllib2.build_opener(CacheHandler(".cache"))
-    urllib2.install_opener(opener)
+    if options.cache:
+        logging.info("using .cache")
+        opener = urllib2.build_opener(CacheHandler(".cache"))
+        urllib2.install_opener(opener)
 
-    feed_url = "http://www.prnewswire.com/rss/all-news-releases-from-PR-newswire-news.rss"
-
-    logging.debug("read feed %s", feed_url)
-    feed = feedparser.parse(feed_url)
-    all_urls = [e.link for e in feed.entries]
+    all_urls = find_latest()
+    
     # cull out ones we've got
     urls = [url for url in all_urls if not store.already_got(url)]
     logging.info("feed yields %d urls (%d are new)", len(all_urls),len(urls))
