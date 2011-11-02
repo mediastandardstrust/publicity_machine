@@ -16,6 +16,26 @@ config.readfp(open('churnalism.cfg'))
 USER = config.get("DEFAULT",'user')
 PASS = config.get("DEFAULT",'pass')
 
+
+class DummyStore:
+
+    def __init__(self,name,doc_type):
+        logging.warning("running against dummy store")
+        pass
+
+    def save(self):
+        pass
+
+    def already_got(self, url):
+        return False
+
+    def add(self,doc):
+        url = doc['url']
+        for f in ('url','date','title','company','text'):
+            assert f in doc
+        logging.info("store: %s (%s)",url,doc['title'])
+
+
 class Store:
     """
     Abstracts out an interface to churnalism server, and
@@ -91,7 +111,7 @@ class Store:
         self.cnt += 1
         if self.cnt > AUTOSAVE_THRESHOLD:
             self.save()
-        return doc_id
+        #return doc_id
 
 
 

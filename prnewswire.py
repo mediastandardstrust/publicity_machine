@@ -13,7 +13,7 @@ import time
 
 from urllib2helpers import CacheHandler
 import util
-from store import Store
+from store import Store,DummyStore
 
 # eg
 # "EAST PEORIA, Ill., Oct. 24, 2011 /PRNewswire/ -- "
@@ -146,6 +146,7 @@ def main():
     parser = OptionParser(usage="%prog: [options]")
     parser.add_option('-v', '--verbose', action='store_true')
     parser.add_option('-d', '--debug', action='store_true')
+    parser.add_option('-t', '--test', action='store_true', help="test only - don't send any documents to server")
     (options, args) = parser.parse_args()
 
     log_level = logging.ERROR
@@ -155,7 +156,10 @@ def main():
         log_level = logging.INFO
     logging.basicConfig(level=log_level)    #, format='%(message)s')
 
-    store = Store("prnewswire", doc_type=1)
+    if options.test:
+        store = DummyStore("prnewswire", doc_type=1)
+    else:
+        store = Store("prnewswire", doc_type=1)
 
     opener = urllib2.build_opener(CacheHandler(".cache"))
     urllib2.install_opener(opener)
