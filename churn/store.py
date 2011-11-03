@@ -11,10 +11,6 @@ import ConfigParser
 
 AUTOSAVE_THRESHOLD = 10
 
-config = ConfigParser.ConfigParser()
-config.readfp(open('churnalism.cfg'))
-USER = config.get("DEFAULT",'user')
-PASS = config.get("DEFAULT",'pass')
 
 
 class DummyStore:
@@ -42,7 +38,12 @@ class Store:
     keeps track of docids which have been uploaded
     """
 
-    def __init__(self,name,doc_type):
+    config = ConfigParser.ConfigParser()
+    config.readfp(open('churnalism.cfg'))
+    USER = config.get("DEFAULT",'user')
+    PASS = config.get("DEFAULT",'pass')
+
+    def __init__(self, name, doc_type):
         # file to track which ones have been added
         self.filename = name + ".docids"
         self.doc_type = doc_type
