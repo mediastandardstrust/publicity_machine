@@ -93,7 +93,8 @@ class BaseScraper(object):
 
                     # encode text fields
                     for f in ('url','title','company','text','location','language','topics'):
-                        press_release[f] = press_release[f].encode('utf-8')
+                        if f in press_release:
+                            press_release[f] = press_release[f].encode('utf-8')
                     self.store.add(press_release)
 
                 except Exception as e:
