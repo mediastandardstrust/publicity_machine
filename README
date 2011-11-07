@@ -1,0 +1,19 @@
+publicity_machine - a python framework to grab press releases and load them
+into churnalism.
+
+The "churn" package provides the framework. In general, you derive
+a scraper from churn.BaseScraper, then invoke it's main() method.
+
+The BaseScraper methods you'd want to override are:
+
+    __init__()    - to set the scraper name and the doc_type to use. Derived
+                    scrapers can also define additional commandline arguments
+                    here (see prnewswire for an example).
+    find_latest() - to grab a list of the latest press releases (usually
+                    from an rss feed)
+    extract()     - parse html data to pull out the various text and metadata
+                    of the press release
+
+The marketwire scraper is probably the simplest example.
+
+

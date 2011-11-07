@@ -9,6 +9,17 @@ from store import Store,DummyStore
 
 # TODO: add option to run as a daemon...
 class BaseScraper(object):
+    """ basic scraper framework for grabbing press releases
+
+    Derived scrapers generally need to implement 3 methods:
+    __init__()    - to set the scraper name and the doc_type to use. Derived
+                    scrapers can also define additional commandline arguments
+                    here (see prnewswire for an example).
+    find_latest() - to grab a list of the latest press releases (usually
+                    from an rss feed)
+    extract()     - parse html data to pull out the various text and metadata
+                    of the press release
+    """
     def __init__(self, name, doc_type):
 
         self.name = name
