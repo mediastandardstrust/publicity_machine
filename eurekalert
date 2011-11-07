@@ -1,0 +1,107 @@
+#!/usr/bin/env python
+
+import lxml.html
+import re
+import urllib
+import urllib2
+from datetime import datetime,date,timedelta
+import logging
+from optparse import OptionParser
+import feedparser
+import time
+
+
+from churn import util, fuzzydate
+from churn.basescraper import BaseScraper
+
+
+
+class EurekalertScraper(BaseScraper):
+    """ scraper to grab press releases from eurekalert """
+
+    def __init__(self):
+        super(EurekalertScraper, self).__init__('eurekalert', 2)
+
+
+    def find_latest(self):
+        """ find latest set of press releases"""
+        feed_url = "http://www.eurekalert.org/rss.xml"
+
+        logging.debug("read feed %s", feed_url)
+        feed = feedparser.parse(feed_url)
+        all_urls = [e.link for e in feed.entries]
+        return all_urls
+
+
+
+    # output fields:
+    # url
+    # date  - unix timestamp
+    # title
+    # company
+    # text
+    # topics    - comma-separated topics
+
+    # not output:
+    # language - 'en_us', 'fr', 'es' etc...
+    # location - 
+    def extract(self,html, url):
+        """ extract eurekalert press release data from a page of html """
+
+        # cruft elements to strip before extracting text (if you add to this, DON'T FORGET THE COMMAS! :-)
+        cruft_sel = 'table, script, style'
+
+        out = {'url':url}
+
+        # site claims iso-8859-1, but it's frequently lying.
+        parser = lxml.html.HTMLParser(encoding='windows-1258')
+        doc = lxml.html.document_fromstring(html, parser, base_url=url)
+        doc.make_links_absolute()
+
+        body = doc.cssselect('body.release')[0]
+
+
+        h1 = body.find('h1')
+        out['title'] = unicode(h1.text_content()).strip()
+
+
+        source_span = body.cssselect('span.relinst')[0]
+        out['company'] = source_span.text_content().strip()
+
+        keywords_meta = doc.cssselect('head meta[name="keywords"]')[0]
+        out['topics'] = u','.join(keywords_meta.get('content').split())
+
+        date_meta = doc.cssselect('head meta[name="date"]')[0]
+        (fd,span) = fuzzydate.parse_date(date_meta.get('content'))
+        out['date'] = int(time.mktime(fd.date().timetuple())*1000)
+
+
+        # drop everything before main heading
+        for e in h1.itersiblings(preceding=True):
+            body.remove(e)
+        body.remove(h1)
+
+        # drop everything after the <hr>
+        hr = body.find('hr')
+        for e in hr.itersiblings():
+            body.remove(e)
+        body.remove(hr)
+        
+
+        [cruft.drop_tree() for cruft in body.cssselect(cruft_sel)]
+        content = util.render_text(body)
+        content = re.compile(r'[\t ]{1,}',re.DOTALL).sub(' ',content)
+        content = re.compile(r'\s{2,}$',re.MULTILINE).sub('\n',content)
+        out['text'] = content
+
+        return out
+
+
+
+
+if __name__ == '__main__':
+    scraper = EurekalertScraper()
+    scraper.main()
+
+
+
