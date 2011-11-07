@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+import lxml.html
+import re
+import datetime
+import time
+import logging
+import feedparser
+
+from churn import util, fuzzydate
+from churn.basescraper import BaseScraper
+
+
+class MarketwireScraper(BaseScraper):
+    """ scraper to grab press releases from marketwire """
+
+    def __init__(self):
+        super(MarketwireScraper, self).__init__('marketwire', 3)
+
+
+    def find_latest(self):
+        """ find latest set of press releases"""
+        feed_url = "http://www.marketwire.com/rss/recentheadlines.xml"
+
+        logging.debug("read feed %s", feed_url)
+        feed = feedparser.parse(feed_url)
+        all_urls = [e.link for e in feed.entries]
+        return all_urls
+
+    # output fields:
+    # url
+    # date  - unix timestamp
+    # title
+    # company
+    # text
+    # language - 'en_us', 'fr_CA', 'es' etc...
+    # location - 
+
+    # not output:
+    # topics    - comma-separated topics
+    def extract(self, html, url):
+        """ extract eurekalert press release data from a page of html """
+       
+        out = {'url':url}
+        doc = lxml.html.fromstring(html)
+
+        main = doc.cssselect('#newsroom-copy')[0]
+
+        # source company in first div
+        source_div = main.cssselect('div')[0]
+        source = unicode(source_div.text_content()).strip()
+        src_pat = re.compile(r'^\s*(?:SOURCE:\s+)?(.*?)$',re.MULTILINE)
+        m = src_pat.match(source)
+        if m is not None:
+            source = m.group(1)
+        out['company'] = source
+
+        content_div = main.cssselect('.mw_release')[0]
+
+
+
+        title_div = main.cssselect('h1')[0]
+
+        out['title'] = unicode(title_div.text_content())
+        out['text'] = util.render_text(content_div)
+
+        dateline_pat = re.compile(r'^\s*(.*?)\s*--[(].*?[)]',re.MULTILINE)
+        m = dateline_pat.match(out['text'])
+        out['location'] = m.group(1)
+
+        out['language'] = unicode(doc.cssselect('input#lng')[0].get('value'))
+
+        date_p = doc.cssselect('#news-date')[0]
+        (fd,span) = fuzzydate.parse_date(date_p.text_content())
+        out['date'] = int(time.mktime(fd.date().timetuple())*1000)
+
+        #        util.dump(out)
+        return out
+
+
+        # break up dateline, eg
+    #    m = dateline_pat.search(content)
+    #    pprint(m.group('month'))
+
+
+#    test_url = "http://www.marketwire.com/press-release/unwind-this-autumn-with-a-wood-fired-oven-by-the-stone-bake-oven-company-1577177.htm"
+
+
+if __name__ == '__main__':
+    scraper = MarketwireScraper()
+    scraper.main()
+
