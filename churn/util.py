@@ -67,9 +67,16 @@ def lookup_month(name):
 def dump(pr):
     """ dump a press release summary to stdout """
     enc = 'utf-8'
+    N = 150
 
-    out = u"%s\n" % (pr['url'],)
-    for f in ('title','pubdate','language','source'):
-        out += u" %s: %s\n" % (f,pr[f])
-    out += " topics: %s\n" % (u', '.join([t for t in pr['topics']]),)
-    print out.encode('utf-8')
+    print('-'*10)
+    for f in pr:
+        val = pr[f]
+        if not isinstance(val,unicode):
+            val = unicode(pr[f])
+        val = val.encode(enc)
+        if len(val.split('\n')) > 1:
+            print "###%s###\n%s" %(f,val)
+        else:
+            print "###%s###: %s" %(f,val)
+
