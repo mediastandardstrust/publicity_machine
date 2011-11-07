@@ -19,6 +19,7 @@ class BaseScraper(object):
         self.parser.add_option('-d', '--debug', action='store_true')
         self.parser.add_option('-t', '--test', action='store_true', help="test only - don't send any documents to server")
         self.parser.add_option('-c', '--cache', action='store_true', help="cache downloaded data .cache dir (for repeated runs during test)")
+        self.parser.add_option('-u', '--url', nargs=1, help="process just the given URL")
 
 
 
@@ -59,7 +60,12 @@ class BaseScraper(object):
         see prnewswire for an example.
         """
 
-        urls = self.find_latest()
+
+        if options.url:
+            urls = [options.url,]
+        else:
+            urls = self.find_latest()
+
         self.process_batch(urls)
 
 
