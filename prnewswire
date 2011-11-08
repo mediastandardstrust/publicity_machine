@@ -130,6 +130,10 @@ class PRNewsWireScraper(BaseScraper):
         # "NUEVA YORK, 26 de octubre de 2011 /PRNewswire-HISPANIC PR WIRE/ --"
         dateline_pat = re.compile(r'^\s*(?P<location>.*?),\s*(?P<month>\w{3,})[.]?\s*(?P<day>\d{1,2}),\s*(?P<year>\d{4})\s*/(?P<wire>.*?)/\s*--\s*',re.MULTILINE)
 
+        # pattern to extract prnewswire internal id from url
+        # eg http://www.prnewswire.com/news-releases/dnainfocom-announces-nycs-first-uptown-beauty-month-through-november-133436033.html
+        id_pat = re.compile(r'-(\d{5,}).html')
+
         # eg "SOURCE blahcorp inc."
         source_pat = re.compile(r'^(?:SOURCE|FUENTE)\s+(?P<source>.*?)\s*$',re.MULTILINE)
 
@@ -138,15 +142,20 @@ class PRNewsWireScraper(BaseScraper):
 
         out = {'url':url}
 
+        id = int(id_pat.search(url).group(1))
+        out['id'] = id
+
         doc = lxml.html.fromstring(html)
         doc.make_links_absolute(base_url=url)
 
         topics = set()
-        topics_div = doc.cssselect('.col-1 .seo-h4-seemorereleases')[0]
-        for a in topics_div.findall('a'):
-            topic = unicode(a.get('title')).strip()
-            topic = re.sub(',','',topic)    # kill commas
-            topics.add(topic)
+        foo = doc.cssselect('.col-1 .seo-h4-seemorereleases')
+        if foo:
+            topics_div = foo[0]
+            for a in topics_div.findall('a'):
+                topic = unicode(a.get('title')).strip()
+                topic = re.sub(',','',topic)    # kill commas
+                topics.add(topic)
         out['topics'] = u','.join(topics)
 
         # "<meta http-equiv='Content-Language' content='es'/>"
@@ -187,6 +196,7 @@ class PRNewsWireScraper(BaseScraper):
 
         out['date'] = int(time.mktime(pubdate.timetuple())*1000)
         out['location'] = location
+
         return out
 
 

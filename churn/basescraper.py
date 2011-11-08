@@ -104,7 +104,6 @@ class BaseScraper(object):
                     logging.debug("fetch %s",url)
                     response = urllib2.urlopen(url)
                     html = response.read()
-
                     # TODO: maybe just skip ones which redirect to other domains?
                     if response.geturl() != url:
                         logging.warning("Redirect detected %s => %s",url,response.geturl())
