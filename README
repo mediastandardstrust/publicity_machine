@@ -1,19 +1,69 @@
-publicity_machine - a python framework to grab press releases and load them
+publicity_machine
+=================
+
+a python framework to grab press releases and load them
 into churnalism.
 
 The "churn" package provides the framework. In general, you derive
 a scraper from churn.BaseScraper, then invoke it's main() method.
 
-The BaseScraper methods you'd want to override are:
+Derived scrapers need to provide:
 
-    __init__()    - to set the scraper name and the doc_type to use. Derived
-                    scrapers can also define additional commandline arguments
-                    here (see prnewswire for an example).
+    name          - name of the scraper (eg 'prnewswire')
+    doc_type      - numeric type of documents uploaded to the server (usually
+                    each scraper will be assigned it's own doc_type)
     find_latest() - to grab a list of the latest press releases (usually
-                    from an rss feed)
+                    from an rss feed). Returns an iterable object of urls to
+                    scrape, most likely a simple list, but you could return
+                    a generator object if you wanted.
     extract()     - parse html data to pull out the various text and metadata
-                    of the press release
+                    of the press release, returning it as a dictionary.
+                    all strings should be returned as unicode.
+                    The required fields are:
+
+                     url
+                     title: a single line of text
+                     text: main text of press release (stripped of html tags)
+                     date: time of issue, as a unix timestamp
+                     source: eg name of the company that issued the press release
+                    Any other fields can also be included. Some which are
+                    reasonably standard so far:
+
+                     location: eg "London, England"
+                     language: eg 'fr_CA', 'es', 'en', 'en_us' etc...
+                     topics: comma-separated list eg "Technology, Health"
+                     id: internal id of press release from website CMS
+                         (for when there's an obvious ID in the url)
+
 
 The marketwire scraper is probably the simplest example.
+The prnewswire scraper is an example of a scraper with some custom options (to
+scrape historical press releases).
+
+a quick bare-bones outline:
+-------------------------------------------------------------------------
+#!/usr/bin/env python
+
+from churn.basescraper import BaseScraper
+
+class BlahBlahScraper(BaseScraper):
+    name = 'blahblah'
+    doc_type = 42
+
+    def find_latest(self):
+        urls = []
+        ...blah blah blah...
+        return urls
+
+    def extract(self,html, url):
+        press_release = {}
+        ...blah blah blah...
+        return press_release
+
+if __name__ == '__main__':
+    scraper = BlahBlahScraper()
+    scraper.main()
+-------------------------------------------------------------------------
+
 
 

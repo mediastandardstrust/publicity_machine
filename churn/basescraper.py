@@ -1,6 +1,7 @@
 import logging
 import urllib2
 from optparse import OptionParser
+import ConfigParser
 
 from urllib2helpers import CacheHandler
 from store import Store,DummyStore
@@ -11,27 +12,27 @@ from store import Store,DummyStore
 class BaseScraper(object):
     """ basic scraper framework for grabbing press releases
 
-    Derived scrapers generally need to implement 3 methods:
-    __init__()    - to set the scraper name and the doc_type to use. Derived
-                    scrapers can also define additional commandline arguments
-                    here (see prnewswire for an example).
+    Derived scrapers generally need to implement:
+    name          - string name of the scraper
+    doc_type      - numeric document type for uploaded press releases
     find_latest() - to grab a list of the latest press releases (usually
                     from an rss feed)
     extract()     - parse html data to pull out the various text and metadata
                     of the press release
     """
-    def __init__(self, name, doc_type):
+    def __init__(self):
 
-        self.name = name
-        self.doc_type = doc_type
+        # derived classes need to set these
+        assert self.name is not None
+        assert self.doc_type is not None
 
         self.parser = OptionParser(usage="%prog: [options]")
         self.parser.add_option('-v', '--verbose', action='store_true')
         self.parser.add_option('-d', '--debug', action='store_true')
         self.parser.add_option('-t', '--test', action='store_true', help="test only - don't send any documents to server")
-        self.parser.add_option('-c', '--cache', action='store_true', help="cache downloaded data .cache dir (for repeated runs during test)")
+        self.parser.add_option('-c', '--cache', action='store_true', help="cache all http transfers in .cache dir (for repeated runs during test)")
         self.parser.add_option('-u', '--url', nargs=1, help="process just the given URL")
-
+        self.parser.add_option('-i', '--ini-file', default="churnalism.cfg", nargs=1, help="filename for connection settings [default: %default]")
 
 
     def main(self):
@@ -50,7 +51,14 @@ class BaseScraper(object):
         if options.test:
             self.store = DummyStore(self.name, self.doc_type)
         else:
-            self.store = Store(self.name, self.doc_type)
+            # load in config file for real run
+            config = ConfigParser.ConfigParser()
+            config.readfp(open(options.ini_file))
+            auth_user = config.get("DEFAULT",'user')
+            auth_pass = config.get("DEFAULT",'pass')
+            server = config.get("DEFAULT",'server')
+
+            self.store = Store(self.name, self.doc_type, auth_user=auth_user, auth_pass=auth_pass, server=server)
 
 
         if options.cache:
@@ -103,7 +111,8 @@ class BaseScraper(object):
                     press_release = self.extract(html, url)
 
                     # encode text fields
-                    for f in ('url','title','company','text','location','language','topics'):
+                    # TODO: use isinstance(...,unicode) instead
+                    for f in ('url','title','source','text','location','language','topics'):
                         if f in press_release:
                             press_release[f] = press_release[f].encode('utf-8')
                     self.store.add(press_release)

@@ -7,7 +7,6 @@ import urllib
 import urllib2
 from pprint import pprint
 import base64
-import ConfigParser
 
 AUTOSAVE_THRESHOLD = 10
 
@@ -27,8 +26,9 @@ class DummyStore:
 
     def add(self,doc):
         url = doc['url']
-        for f in ('url','date','title','company','text'):
-            assert f in doc
+        for f in ('url','date','title','source','text'):
+            if f not in doc:
+                raise Exception("missing '%s' field" %(f))
         logging.info("store: %s (%s)",url,doc['title'])
 
 
@@ -38,12 +38,13 @@ class Store:
     keeps track of docids which have been uploaded
     """
 
-    config = ConfigParser.ConfigParser()
-    config.readfp(open('churnalism.cfg'))
-    USER = config.get("DEFAULT",'user')
-    PASS = config.get("DEFAULT",'pass')
 
-    def __init__(self, name, doc_type):
+    def __init__(self, name, doc_type, auth_user, auth_pass, server):
+
+        self.USER = auth_user
+        self.PASS = auth_pass
+        self.SERVER = server
+
         # file to track which ones have been added
         self.filename = name + ".docids"
         self.doc_type = doc_type
@@ -95,12 +96,13 @@ class Store:
     def add(self,doc):
         url = doc['url']
 
-        for f in ('url','date','title','company','text'):
-            assert f in doc
+        for f in ('url','date','title','source','text'):
+            if f not in doc:
+                raise Exception("missing '%s' field" %(f))
 
         doc_id = self.doc_id
 
-        post_url = "http://us.churnalism.com/document/%d/%d" % (self.doc_type,doc_id)
+        post_url = "http://%s/document/%d/%d" % (self.SERVER,self.doc_type,doc_id)
 
         # post it to the server
         self._post(post_url,doc)
@@ -122,7 +124,7 @@ class Store:
 
         req.add_data(urllib.urlencode(doc))
 
-        auth = 'Basic ' + base64.urlsafe_b64encode("%s:%s" % (USER, PASS))
+        auth = 'Basic ' + base64.urlsafe_b64encode("%s:%s" % (self.USER, self.PASS))
         req.add_header('Authorization', auth)
 
         return urllib2.urlopen(req)

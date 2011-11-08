@@ -13,9 +13,8 @@ from churn.basescraper import BaseScraper
 class MarketwireScraper(BaseScraper):
     """ scraper to grab press releases from marketwire """
 
-    def __init__(self):
-        super(MarketwireScraper, self).__init__('marketwire', 3)
-
+    name = 'marketwire'
+    doc_type = 3
 
     def find_latest(self):
         """ find latest set of press releases"""
@@ -30,7 +29,7 @@ class MarketwireScraper(BaseScraper):
     # url
     # date  - unix timestamp
     # title
-    # company
+    # source
     # text
     # language - 'en_us', 'fr_CA', 'es' etc...
     # location - 
@@ -52,7 +51,7 @@ class MarketwireScraper(BaseScraper):
         m = src_pat.match(source)
         if m is not None:
             source = m.group(1)
-        out['company'] = source
+        out['source'] = source
 
         content_div = main.cssselect('.mw_release')[0]
 

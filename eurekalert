@@ -19,12 +19,11 @@ from churn.basescraper import BaseScraper
 class EurekalertScraper(BaseScraper):
     """ scraper to grab press releases from eurekalert """
 
-    def __init__(self):
-        super(EurekalertScraper, self).__init__('eurekalert', 2)
-
+    name = 'eurekalert'
+    doc_type = 2
 
     def find_latest(self):
-        """ find latest set of press releases"""
+        """ find latest set of press releases, return list of urls to scrape """
         feed_url = "http://www.eurekalert.org/rss.xml"
 
         logging.debug("read feed %s", feed_url)
@@ -38,7 +37,7 @@ class EurekalertScraper(BaseScraper):
     # url
     # date  - unix timestamp
     # title
-    # company
+    # source
     # text
     # topics    - comma-separated topics
 
@@ -66,7 +65,7 @@ class EurekalertScraper(BaseScraper):
 
 
         source_span = body.cssselect('span.relinst')[0]
-        out['company'] = source_span.text_content().strip()
+        out['source'] = source_span.text_content().strip()
 
         keywords_meta = doc.cssselect('head meta[name="keywords"]')[0]
         out['topics'] = u','.join(keywords_meta.get('content').split())

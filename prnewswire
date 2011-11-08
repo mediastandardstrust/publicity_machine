@@ -19,8 +19,11 @@ from churn.basescraper import BaseScraper
 class PRNewsWireScraper(BaseScraper):
     """ scraper to grab press releases from prnewswire """
 
+    name = 'prnewswire'
+    doc_type = 1
+
     def __init__(self):
-        super(PRNewsWireScraper, self).__init__('prnewswire', 1)
+        super(PRNewsWireScraper, self).__init__()
         self.parser.add_option('-r', '--range', action="store", dest="range", help="""grab press releases in date range (eg "2011-01-01..2011-01-05" or "2011-01-01" for a single day)""")
 
 
@@ -114,7 +117,7 @@ class PRNewsWireScraper(BaseScraper):
     # url
     # date  - unix timestamp
     # title
-    # company
+    # source
     # text
     # topics    - comma-separated topics
     # location
@@ -165,9 +168,9 @@ class PRNewsWireScraper(BaseScraper):
         # eg "SOURCE blahcorp inc."
         m = source_pat.search(content)
         if m:
-            out['company'] = m.group('source')
+            out['source'] = m.group('source')
         else:
-            out['company'] = u''
+            out['source'] = u''
 
         # break up dateline
         m = dateline_pat.search(content)
