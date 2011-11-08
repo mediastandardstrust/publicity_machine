@@ -72,7 +72,11 @@ class MarketwireScraper(BaseScraper):
         (fd,span) = fuzzydate.parse_date(date_p.text_content())
         out['date'] = int(time.mktime(fd.date().timetuple())*1000)
 
-        #        util.dump(out)
+        # pattern to extract internal db id from url
+        id_pat = re.compile(r'-(\d{5,}).htm')
+        m=id_pat.search(url)
+        if m:
+            out['id'] = m.group(1)
         return out
 
 
