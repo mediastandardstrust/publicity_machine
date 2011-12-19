@@ -3,9 +3,7 @@
 
 from StringIO import StringIO
 from lxml import etree
-import httplib
-import urllib
-import urllib2
+import urllib3
 import fnmatch
 import os
 import argparse
@@ -15,33 +13,28 @@ from multiprocessing import Pool,Lock,Value
 parser = argparse.ArgumentParser(description='Load wikipedia articles.')
 parser.add_argument('dirname', action='store', help='Path to the parent folder containing bzip files')
 
-SERVER_URL="127.0.0.1:8080"
-POST_HEADERS={"Content-type": "application/x-www-form-urlencoded","Accept": "text/plain"}
+conn = urllib3.HTTPConnectionPool("127.0.0.1:8080",maxsize=4)
 
-def post(conn,data):
+def post(data):
   with lock:
     docid.value+=1
     url="/document/10/%s/"%docid.value
-  conn.request("POST",url,urllib.urlencode(data),POST_HEADERS)
-  response=conn.getresponse()
-  response.read()
+  response=conn.request_encode_body("POST",url,data,encode_multipart=False)
   print "POST: %s %s %s %s"%(response.status,url,data["id"],data["title"])
 
 def processFile(filename):
-  conn = httplib.HTTPConnection(SERVER_URL)
   xml="<root>%s</root>"%bz2.BZ2File(filename, 'rb').read()
   parser=etree.XMLParser(recover=True)
   tree=etree.fromstring(xml,parser=parser)
   etree.strip_tags(tree,"a")
   for doc in tree.xpath("//doc"):
     text=doc.text.encode('utf-8').split("\n")
-    data={
+    post({
       'id'    : doc.get("id"),
       'title' : text[1],
       'text'  : "\n".join(text[2:]),
       'url'   : doc.get("url").replace("http://it.wikipedia.org","http://en.wikipedia.org")
-    }
-    post(conn,data)
+    })
 
 def getFiles(path):
   matches = []
