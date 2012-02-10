@@ -36,7 +36,7 @@ class MarketwireScraper(BaseScraper):
 
     # not output:
     # topics    - comma-separated topics
-    def extract(self, html, url):
+    def extract(self, html, url, extra):
         """ extract eurekalert press release data from a page of html """
        
         out = {'url':url}

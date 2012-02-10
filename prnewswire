@@ -122,7 +122,7 @@ class PRNewsWireScraper(BaseScraper):
     # topics    - comma-separated topics
     # location
     # language - 'en_us', 'fr', 'es' etc...
-    def extract(self,html, url):
+    def extract(self,html, url, extra=None):
         """ extract prnewswire press release data from a page of html """
 
         # eg
