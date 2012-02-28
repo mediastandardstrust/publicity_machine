@@ -88,7 +88,7 @@ class BaseScraper(object):
         self.process_batch(urls)
 
 
-    def process_batch(self, urls, extra=None):
+    def process_batch(self, urls):
         """ run through a list of urls, fetching, extracting and storing each in turn """
 
         # cull out ones we've got
@@ -107,7 +107,7 @@ class BaseScraper(object):
                     # TODO: maybe just skip ones which redirect to other domains?
                     if response.geturl() != url:
                         logging.warning("Redirect detected %s => %s",url,response.geturl())
-                    press_release = self.extract(html, url, extra)
+                    press_release = self.extract(html, url)
 
                     # encode text fields
                     # TODO: use isinstance(...,unicode) instead

@@ -18,6 +18,7 @@ from util import condense_whitespace
 class GenericRSSScraper(BaseScraper):
     name = "generic_rss_scraper"
     doc_type = 5
+    extra = {}
 
     def __init__(self):
         super(GenericRSSScraper, self).__init__()
@@ -37,14 +38,14 @@ class GenericRSSScraper(BaseScraper):
                 for date in item.iter('pubDate'):
                     dates.append(date.text)
 
-        extra = { 'source': name, 
+        self.extra = { 'source': name, 
                   'links': readable_links, 
                   'dates': dates  }
 
-        self.process_batch(readable_links, extra)
+        self.process_batch(readable_links)
 #        self.extract(readable_links)  #process_batch
 
-    def extract(self, response, link, extra): #extract
+    def extract(self, response, link): #extract
 
 #    for link in link_list:
     #       response = ulib.urlopen(link).read()
@@ -60,16 +61,16 @@ class GenericRSSScraper(BaseScraper):
         title = condense_whitespace(title)
         body = condense_whitespace(body)
 
-        links = extra['links']
+        links = self.extra['links']
         
-        d = unicode(extra['dates'][links.index(link)])
+        d = unicode(self.extra['dates'][links.index(link)])
         date = parse(d)
 
         doc = { 'url': link,
                 'title': title,
                 'text': body,
                 'date': date,
-                'source': extra['source']}
+                'source': self.extra['source']}
 
         return doc
 

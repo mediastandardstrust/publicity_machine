@@ -44,7 +44,7 @@ class EurekalertScraper(BaseScraper):
     # not output:
     # language - 'en_us', 'fr', 'es' etc...
     # location - 
-    def extract(self,html, url, extra):
+    def extract(self,html, url):
         """ extract eurekalert press release data from a page of html """
 
         # cruft elements to strip before extracting text (if you add to this, DON'T FORGET THE COMMAS! :-)

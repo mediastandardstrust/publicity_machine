@@ -86,7 +86,7 @@ class PRNewsWireScraper(BaseScraper):
                 'page': page
                 }
         
-            list_url = "http://www.prnewswire.com/news-releases/news-releases-list/?" + urllib.urlencode(params)
+            list_url = "http://www.prnewswire.com/news-releases/english-releases/?" + urllib.urlencode(params)
             logging.debug("fetch %s",list_url)
             html = urllib2.urlopen(list_url).read()
 
@@ -94,22 +94,25 @@ class PRNewsWireScraper(BaseScraper):
             doc.make_links_absolute(base_url=list_url)
 
 
-            for li in doc.cssselect("#ulNewsreleaseList>li"):
+            for li in doc.cssselect("div.block02 ul"):
                 a = li.cssselect("a")[0]
-
-                (dt,span) = fuzzydate.parse_date(li.cssselect(".seo-h3-datetime")[0].text_content())
-
+                try:
+                    (dt,span) = fuzzydate.parse_date(li.cssselect(".seo-h3-datetime")[0].text_content())
+                except:
+                    #a link with something besides a url (like language dropdown)
+                    continue
                 # hit a new day?
                 if dt.year != year or dt.month != month or dt.day != day:
                     done = True
                     break
 
                 found.append(a.get('href'))
+                
+                print found
 
             page += 1
             if page > 200:
                 break
-
         return found
 
 
@@ -122,7 +125,7 @@ class PRNewsWireScraper(BaseScraper):
     # topics    - comma-separated topics
     # location
     # language - 'en_us', 'fr', 'es' etc...
-    def extract(self,html, url, extra=None):
+    def extract(self,html, url):
         """ extract prnewswire press release data from a page of html """
 
         # eg
