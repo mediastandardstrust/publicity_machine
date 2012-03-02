@@ -1,4 +1,5 @@
 import logging
+import traceback
 import urllib2
 from optparse import OptionParser
 import ConfigParser
@@ -118,6 +119,7 @@ class BaseScraper(object):
 
                 except Exception as e:
                     logging.error("failed on %s: %s %s",url,e.__class__,e)
+                    print traceback.print_exc()
                     err_cnt += 1
         finally:
             self.store.save()

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import logging
+import re
 from optparse import OptionParser
 from readability.readability import Document 
 import urllib2 as  ulib
@@ -25,20 +26,24 @@ class GenericRSSScraper(BaseScraper):
     
 
     def go(self, options):
+        readable_links = []
+        dates = []
+        names = []
+
         for article in rss_feed_no_body:
             
             name = article['name']
             url = article['feed_url']
-            readable_links = []
-            dates = []
             feed = etree.parse(ulib.urlopen(url))
             for item in feed.iter('item'):
                 for link in item.iter('link'):
                     readable_links.append(link.text)
                 for date in item.iter('pubDate'):
-                    dates.append(date.text)
+                    dates.append(date.text.replace('Sept.', 'Sep'))
 
-        self.extra = { 'source': name, 
+                names.append(name)
+    
+        self.extra = { 'source': names, 
                   'links': readable_links, 
                   'dates': dates  }
 
@@ -62,15 +67,24 @@ class GenericRSSScraper(BaseScraper):
         body = condense_whitespace(body)
 
         links = self.extra['links']
-        
-        d = unicode(self.extra['dates'][links.index(link)])
+       
+        try: 
+            d = unicode(self.extra['dates'][links.index(link)])
+        except:
+            #pr web rss feeds don't have pubdate
+            html_body = html.fromstring(response)
+            d = re.sub('.*\(.*\)', '', html_body.find_class('releaseDateline')[0].text_content())
+
+        print d
+                        
+
         date = parse(d)
 
         doc = { 'url': link,
                 'title': title,
                 'text': body,
                 'date': date,
-                'source': self.extra['source']}
+                'source': self.extra['source'][links.index(link)]}
 
         return doc
 
