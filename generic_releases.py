@@ -75,7 +75,7 @@ class GenericRSSScraper(BaseScraper):
             html_body = html.fromstring(response)
             d = re.sub('.*\(.*\)', '', html_body.find_class('releaseDateline')[0].text_content())
 
-        print d
+        #print d
                         
 
         date = parse(d)

@@ -15,6 +15,7 @@ class MarketwireScraper(BaseScraper):
 
     name = 'marketwire'
     doc_type = 3
+    dates = [] # coordinates with all_urls
 
     def find_latest(self):
         """ find latest set of press releases"""
@@ -23,6 +24,8 @@ class MarketwireScraper(BaseScraper):
         logging.debug("read feed %s", feed_url)
         feed = feedparser.parse(feed_url)
         all_urls = [e.link for e in feed.entries]
+        self.all_urls = all_urls
+        self.dates = [fuzzydate.parse_date(e.date) for e in feed.entries]
         return all_urls
 
     # output fields:
@@ -36,7 +39,7 @@ class MarketwireScraper(BaseScraper):
 
     # not output:
     # topics    - comma-separated topics
-    def extract(self, html, url, extra):
+    def extract(self, html, url):
         """ extract eurekalert press release data from a page of html """
        
         out = {'url':url}
@@ -68,9 +71,13 @@ class MarketwireScraper(BaseScraper):
 
         out['language'] = unicode(doc.cssselect('input#lng')[0].get('value'))
 
-        date_p = doc.cssselect('#news-date')[0]
-        (fd,span) = fuzzydate.parse_date(date_p.text_content())
-        out['date'] = int(time.mktime(fd.date().timetuple())*1000)
+      #  date_p = doc.cssselect('#news-date')[0]
+       # (fd,span) = fuzzydate.parse_date(date_p.text_content())
+       # print date_p.text_content()
+        print self.dates[self.all_urls.index(url)]
+        out['date'] = self.dates[self.all_urls.index(url)]
+    #    out['date'] = int(time.mktime(fd.date().timetuple())*1000)
+    
 
         # pattern to extract internal db id from url
         id_pat = re.compile(r'-(\d{5,}).htm')

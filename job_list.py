@@ -14,6 +14,7 @@ rss_feed_no_body = [
 		     { 'name': "American Petroleum Institute News", 'feed_url': "http://www.api.org/api-news-rss" },
              { 'name': "The Heritage Foundation: Reports", 'feed_url': "http://www.heritage.org/static/rss/reports.xml"},
              { 'name': "Cato Institute: Recent Op-Eds", 'feed_url': "http://feeds.cato.org/CatoRecentOpeds"},
+             { 'name': "GOP Research Briefings", "feed_url": "http://www.gop.com/index.php/briefing/rss_2.0/"},
              { 'name': 'PR News Web - entertainment', 'feed_url': 'http://www.prweb.com/rss2/entertainment.xml'},
              { 'name': 'PR News Web - automotive', 'feed_url': 'http://www.prweb.com/rss2/automotive.xml'},
              { 'name': 'PR News Web - business', 'feed_url': 'http://www.prweb.com/rss2/business.xml'},
