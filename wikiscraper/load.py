@@ -63,7 +63,7 @@ def main(pool):
 if __name__ == "__main__":
   processes = 2
   try:
-    processes = math.ceil(cpu_count() / 2)
+    processes = int(math.ceil(cpu_count() / 2))
   except NotImplementedError:
     pass
   
