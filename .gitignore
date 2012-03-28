@@ -1,3 +1,7 @@
 *.pyc
+.*.swp
+.*.swo
+*.docids
+wikiscraper/enwiki-latest-pages-articles.xml.bz2
 churnalism.cfg
 extracted
