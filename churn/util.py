@@ -1,5 +1,16 @@
 import lxml.html
 
+def decode_string(s):
+    encodings = ['ascii', 'windows-1252', 'latin1', 'utf-8']
+    for (idx, enc) in enumerate(encodings, start=1):
+        try:
+            return (enc, s.decode(enc))
+        except UnicodeDecodeError:
+            if idx == len(encodings):
+                raise
+            else:
+                pass
+
 def render_text(el):
     """ like lxml.html text_content(), but with tactical use of whitespace for block elements """
 
