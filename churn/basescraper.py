@@ -7,7 +7,7 @@ import gzip
 import StringIO
 from urllib2helpers import CacheHandler
 from store import Store,DummyStore
-
+from util import decode_string
 
 
 # TODO: add option to run as a daemon...
@@ -22,6 +22,9 @@ class BaseScraper(object):
     extract()     - parse html data to pull out the various text and metadata
                     of the press release
     """
+
+    headers = {}
+
     def __init__(self):
 
         # derived classes need to set these
@@ -90,7 +93,7 @@ class BaseScraper(object):
         self.process_batch(urls)
 
 
-    def process_batch(self, urls):
+    def process_batch(self, urls, extra_headers=None):
         """ run through a list of urls, fetching, extracting and storing each in turn """
 
         # cull out ones we've got
@@ -104,8 +107,15 @@ class BaseScraper(object):
             for url in urls:
                 try:
                     logging.debug("fetch %s",url)
-                    response = urllib2.urlopen(url)
-                    html = response.read()
+                    headers = {}
+                    headers.update(self.headers)
+                    headers.update(extra_headers)
+                    request = urllib2.Request(url, headers=headers)
+                    response = urllib2.urlopen(request)
+                    content = response.read()
+
+                    (enc, html) = decode_string(content)
+
                     # TODO: maybe just skip ones which redirect to other domains?
                     if response.geturl() != url:
                         logging.warning("Redirect detected %s => %s",url,response.geturl())
