@@ -11,6 +11,8 @@ import base64
 AUTOSAVE_THRESHOLD = 10
 
 
+class StoreFailure(Exception):
+    pass
 
 class DummyStore:
 
@@ -119,13 +121,17 @@ class Store:
 
 
     def _post(self, api_url, doc):
-        logging.debug("posting %s",api_url)
-        req = urllib2.Request(api_url)
+        try:
+            logging.debug("posting %s",api_url)
+            req = urllib2.Request(api_url)
 
-        req.add_data(urllib.urlencode(doc))
+            req.add_data(urllib.urlencode(doc))
 
-        auth = 'Basic ' + base64.urlsafe_b64encode("%s:%s" % (self.USER, self.PASS))
-        req.add_header('Authorization', auth)
+            auth = 'Basic ' + base64.urlsafe_b64encode("%s:%s" % (self.USER, self.PASS))
+            req.add_header('Authorization', auth)
 
-        return urllib2.urlopen(req)
+            return urllib2.urlopen(req)
+
+        except urllib2.HTTPError as e:
+            raise StoreFailure('Failed to POST to {url}: {exception}'.format(url=api_url, exception=e))
 
