@@ -33,7 +33,10 @@ def processFile(pool, first_docid, filename):
   parser=etree.XMLParser(recover=True)
   tree=etree.fromstring(xml,parser=parser)
   etree.strip_tags(tree,"a")
-  docs = list(enumerate(tree.xpath("//doc"), start=first_docid))
+  docgen = (doc for doc in tree.xpath("//doc") 
+            if not doc.get('url', '').endswith(u'_(disambiguation)')
+            and not doc.get('url', '').startswith(u'List_of'))
+  docs = list(enumerate(docgen, start=first_docid))
   for (docid, doc) in docs:
     text=doc.text.encode('utf-8').split("\n")
     attrs = {
