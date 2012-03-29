@@ -44,7 +44,7 @@ def add_document(data, docid):
 def create_pool():
   processes = 2
   try:
-    processes = int(math.ceil(cpu_count() * 2))
+    processes = int(math.ceil(cpu_count() / 2))
   except NotImplementedError:
     pass
   return Pool(processes=processes)
