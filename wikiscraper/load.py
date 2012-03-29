@@ -20,13 +20,26 @@ parser.add_argument('port', action='store', help='Port of the SuperFastMatch ser
 parser.add_argument('doctype', action='store', help='Doctype to use for loaded documents.')
 args = parser.parse_args()
 
+def bifurcate(func, iterable):
+    ts = []
+    fs = []
+    for item in iterable:
+        if func(item):
+            ts.append(item)
+        else:
+            fs.append(item)
+    return (ts, fs)
+
 def add_document(data, docid):
   sfm = superfastmatch.Client(url='http://{host}:{port}'.format(host=args.host, 
                                                                 port=args.port), 
                               parse_response=True)
-  sfm.add(args.doctype, docid, **data)
-  if args.verbose:
-    print "{0}, {1}: '{2}'".format(args.doctype, docid, data['title'])
+  result = sfm.add(args.doctype, docid, **data)
+  if result['success'] == True:
+    if args.verbose:
+      print "{0}, {1}: '{2}'".format(args.doctype, docid, data['title'])
+  else:
+      print "Failed to add '{0}'".format(data['title'])
 
 def create_pool():
   processes = 2
@@ -43,10 +56,11 @@ def processFile(first_docid, filename):
   parser=etree.XMLParser(recover=True)
   tree=etree.fromstring(xml,parser=parser)
   etree.strip_tags(tree,"a")
-  docgen = (doc for doc in tree.xpath("//doc") 
-            if not doc.get('url', '').endswith(u'_(disambiguation)')
-            and not doc.get('url', '').startswith(u'List_of'))
-  docs = list(enumerate(docgen, start=first_docid))
+  def inclusion_filter(doc):
+    return (not doc.get('url', '').endswith(u'_(disambiguation)') and not doc.get('url', '').startswith(u'List_of'))
+  (kept, dropped) = bifurcate(inclusion_filter, tree.xpath('//doc'))
+  print "Dropped %s of %s documents" % (len(dropped), len(kept) + len(dropped))
+  docs = list(enumerate(kept, start=first_docid))
   for (docid, doc) in docs:
     text=doc.text.encode('utf-8').split("\n")
     attrs = {
