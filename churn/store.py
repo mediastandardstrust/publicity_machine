@@ -3,8 +3,7 @@ import os
 import errno
 import logging
 import csv
-import urllib
-import urllib2
+import superfastmatch
 from pprint import pprint
 import base64
 
@@ -46,6 +45,11 @@ class Store:
         self.USER = auth_user
         self.PASS = auth_pass
         self.SERVER = server
+
+        self._sfm = superfastmatch.Client(url='http://' + server + '/', 
+                                          parse_response=True,
+                                          username=auth_user, 
+                                          password=auth_pass)
 
         # file to track which ones have been added
         self.filename = name + ".docids"
@@ -104,34 +108,19 @@ class Store:
 
         doc_id = self.doc_id
 
-        post_url = "http://%s/document/%d/%d" % (self.SERVER,self.doc_type,doc_id)
-
-        # post it to the server
-        self._post(post_url,doc)
-
-        # great - now update our local record of stored docs
-        self.index[url] = self.doc_id
-        logging.info("store %d: %s",self.doc_id,url)
-        self.doc_id += 1
-        self.cnt += 1
-        if self.cnt > AUTOSAVE_THRESHOLD:
-            self.save()
-        #return doc_id
-
-
-
-    def _post(self, api_url, doc):
         try:
-            logging.debug("posting %s",api_url)
-            req = urllib2.Request(api_url)
+            self._sfm.add(doctype=self.doc_type, 
+                          docid=doc_id, 
+                          **doc)
 
-            req.add_data(urllib.urlencode(doc))
-
-            auth = 'Basic ' + base64.urlsafe_b64encode("%s:%s" % (self.USER, self.PASS))
-            req.add_header('Authorization', auth)
-
-            return urllib2.urlopen(req)
-
-        except urllib2.HTTPError as e:
-            raise StoreFailure('Failed to POST to {url}: {exception}'.format(url=api_url, exception=e))
+            # great - now update our local record of stored docs
+            self.index[url] = self.doc_id
+            logging.info("store %d: %s",self.doc_id,url)
+            self.doc_id += 1
+            self.cnt += 1
+            if self.cnt > AUTOSAVE_THRESHOLD:
+                self.save()
+        except superfastmatch.SuperFastMatchError, e:
+            raise StoreFailure('Failed to store document: {0}'.format(str(e)))
+        #return doc_id
 
