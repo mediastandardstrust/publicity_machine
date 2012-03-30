@@ -2,21 +2,19 @@
 
 import re
 import logging
+import time
+import httplib
 from optparse import OptionParser
 from readability.readability import Document 
-import urllib2 as  ulib
 from lxml import etree, html
-from churn import util, fuzzydate
 from churn.basescraper import BaseScraper
 from dateutil.parser import parse
 from dateutil.tz import * 
-from datetime import *
-import time
-import gzip
-import StringIO
+from datetime import datetime
+import requests
 import feedparser
 
-from util import condense_whitespace
+from util import readability_extract
 
 class CongressLeadership(BaseScraper):
     urls = ['http://www.speaker.gov/News/DocumentQuery.aspx?DocumentTypeID=689',
@@ -78,7 +76,13 @@ class CongressLeadership(BaseScraper):
 
     def get_speaker_links(self, leader):
 
-        page = html.fromstring(ulib.urlopen(self.urls[self.index]).read())
+        response = requests.get(self.urls[self.index])
+        if response.status_code != httplib.OK:
+            logging.error('{status}:{url}'.format(status=response.status_code, 
+                                                  url=self.urls[self.index]))
+            return
+
+        page = html.fromstring(response.content)
         page.make_links_absolute(self.urls[0])
         link_list = page.find_class('middlelinks')
         page_count = 1
@@ -92,17 +96,25 @@ class CongressLeadership(BaseScraper):
                     self.links.append(link)
 
             page_count += 1 
-            page = html.fromstring(ulib.urlopen(self.urls[0] + '&Page=%s' % page_count).read())
+            response = requests.get(self.urls[0] + '&Page=%s' % page_count)
+            if response.status_code == httplib.OK:
+                page = html.fromstring(response.content)
 
-            page.make_links_absolute(self.urls[0])
-            link_list = page.find_class('middlelinks')
-            
-            #need different helper functions for each member of leadership
-            self.extra['leader'] = leader         
+                page.make_links_absolute(self.urls[0])
+                link_list = page.find_class('middlelinks')
+                
+                #need different helper functions for each member of leadership
+                self.extra['leader'] = leader         
 
     def get_house_majority_leader_links(self, leader):
 
-        page = html.fromstring(ulib.urlopen(self.urls[self.index]).read())
+        response = requests.get(self.urls[self.index])
+        if response.status_code != httplib.OK:
+            logging.error('{status}:{url}'.format(status=response.status_code, 
+                                                  url=self.urls[self.index]))
+            return
+
+        page = html.fromstring(response.content)
         page.make_links_absolute(self.urls[1])
         link_list = page.get_element_by_id('recent_news_2').get_element_by_id('news_text').iterlinks()
         page_count = 1
@@ -113,16 +125,18 @@ class CongressLeadership(BaseScraper):
 
             if page_count > 2: break #don't want to get every page every time
 
-            page = html.fromstring(ulib.urlopen(l[2]).read())
-            page.make_links_absolute(l[1])
-            page_links = []
-            page_link_containers = page.find_class('pioneer_inner_3')
-            for p in page_link_containers: page_links.append(p.findall('a'))
+            response = requests.get(l[2])
+            if response.status_code == httplib.OK:
+                page = html.fromstring(response.content)
+                page.make_links_absolute(l[1])
+                page_links = []
+                page_link_containers = page.find_class('pioneer_inner_3')
+                for p in page_link_containers: page_links.append(p.findall('a'))
 
-            for item in page_links:
-                href = item[0].get('href')     
-                if href not in self.links:
-                    self.links.append(href)
+                for item in page_links:
+                    href = item[0].get('href')     
+                    if href not in self.links:
+                        self.links.append(href)
         
             page_count += 1 
 
@@ -130,7 +144,13 @@ class CongressLeadership(BaseScraper):
         self.extra['leader'] = leader         
 
     def get_house_minority_leader_links(self, leader):
-        page = html.fromstring(ulib.urlopen(self.urls[self.index]).read())
+        response = requests.get(self.urls[self.index])
+        if response.status_code != httplib.OK:
+            logging.error('{status}:{url}'.format(status=response.status_code, 
+                                                  url=self.urls[self.index]))
+            return
+
+        page = html.fromstring(response.content)
         page.make_links_absolute(self.urls[2].replace('/news/press', ''))
         self.dates = []
         self.links = []
@@ -157,22 +177,27 @@ class CongressLeadership(BaseScraper):
                     "Cache-Control":"max-age=0",
                     "Content-Type":"text/html; charset=utf-8"
         }
-        request = ulib.Request(self.urls[self.index], headers=headers)
-        data = StringIO.StringIO(ulib.urlopen(request).read())
-        response = gzip.GzipFile(fileobj=data).read()
-        page = html.fromstring(response)
-        page.make_links_absolute(self.urls[3].replace('/newsroom/press-releases', ''))
-        linklist = page.find_class('views-row')
-        self.dates = []
-        self.links = []
-        for item in linklist:
-            self.links.append(item.find('.//a').get('href'))
-            self.dates.append(item.find_class('date-display-single')[0].text_content())
-            time.sleep(2)
-        self.extra['leader'] = leader
+        response = requests.get(self.urls[self.index], headers=headers)
+        if response.status_code == httplib.OK:
+            page = html.fromstring(response.content)
+            page.make_links_absolute(self.urls[3].replace('/newsroom/press-releases', ''))
+            linklist = page.find_class('views-row')
+            self.dates = []
+            self.links = []
+            for item in linklist:
+                self.links.append(item.find('.//a').get('href'))
+                self.dates.append(item.find_class('date-display-single')[0].text_content())
+                time.sleep(2)
+            self.extra['leader'] = leader
 
     def get_house_majority_whip_links(self, leader):
-        page = html.fromstring(ulib.urlopen(self.urls[self.index]).read())
+        response = requests.get(self.urls[self.index])
+        if response.status_code != httplib.OK:
+            logging.error('{status}:{url}'.format(status=response.status_code, 
+                                                  url=self.urls[self.index]))
+            return
+
+        page = html.fromstring(response.content)
         page.make_links_absolute(self.urls[4].replace('/newsroom', ''))
         self.dates = []
         self.links = []
@@ -191,7 +216,13 @@ class CongressLeadership(BaseScraper):
 
     def get_senate_minority_leader_links(self, leader):
 
-        page = html.fromstring(ulib.urlopen(self.urls[self.index]).read())
+        response = requests.get(self.urls[self.index])
+        if response.status_code != httplib.OK:
+            logging.error('{status}:{url}'.format(status=response.status_code, 
+                                                  url=self.urls[self.index]))
+            return
+
+        page = html.fromstring(response.content)
         page.make_links_absolute(self.urls[6].replace('/public/index.cfm?p=PressReleases', ''))
         link_list = page.find_class('recordListTitle')
         dates = page.find_class('recordListDate')
@@ -206,7 +237,13 @@ class CongressLeadership(BaseScraper):
         self.extra['leader'] = leader
 
     def get_white_house_links(self, leader):
-        page = html.fromstring(ulib.urlopen(self.urls[self.index]).read())
+        response = requests.get(self.urls[self.index])
+        if response.status_code != httplib.OK:
+            logging.error('{status}:{url}'.format(status=response.status_code, 
+                                                  url=self.urls[self.index]))
+            return
+
+        page = html.fromstring(response.content)
         page.make_links_absolute(self.urls[7].replace('/briefing-room/statements-and-releases',''))
         link_list = page.find_class('views-row')
         self.dates = []
@@ -220,21 +257,10 @@ class CongressLeadership(BaseScraper):
 
     def extract(self, response, link):
 
-        readable = Document(response)
-        body = readable.summary()
-        title = readable.short_title()
-        #try to get date for boehner's press releases
+        (title, body) = readability_extract(response)
 
         #how to find out where speaker links start?
         date = getattr(self, 'parse_%s_date'% self.extra['leader'])(body, response, link) 
-
-        #strip extra html readability leaves in, like p tags
-        title = html.fromstring(title).text_content()
-        body = html.fromstring(body).text_content()
-        title = condense_whitespace(title)
-        body = condense_whitespace(body)
-#        links = extra['links']
-        
 
         doc = { 'url': link,
                 'title': title,

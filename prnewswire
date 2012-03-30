@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 
-import lxml.html
 import re
+import httplib
 import urllib
-import urllib2
 from datetime import datetime,date,timedelta
 import logging
-from optparse import OptionParser
-import feedparser
 import time
+
+
+import lxml.html
+import feedparser
+import requests
 
 
 from churn import util, fuzzydate
@@ -87,28 +89,28 @@ class PRNewsWireScraper(BaseScraper):
                 }
         
             list_url = "http://www.prnewswire.com/news-releases/english-releases/?" + urllib.urlencode(params)
-            logging.debug("fetch %s",list_url)
-            html = urllib2.urlopen(list_url).read()
+            response = requests.get(list_url)
+            if response.status_code == httplib.OK:
 
-            doc = lxml.html.fromstring(html)
-            doc.make_links_absolute(base_url=list_url)
+                doc = lxml.html.fromstring(response.content)
+                doc.make_links_absolute(base_url=list_url)
 
 
-            for li in doc.cssselect("div.block02 ul"):
-                a = li.cssselect("a")[0]
-                try:
-                    (dt,span) = fuzzydate.parse_date(li.cssselect(".seo-h3-datetime")[0].text_content())
-                except:
-                    #a link with something besides a url (like language dropdown)
-                    continue
-                # hit a new day?
-                if dt.year != year or dt.month != month or dt.day != day:
-                    done = True
-                    break
+                for li in doc.cssselect("div.block02 ul"):
+                    a = li.cssselect("a")[0]
+                    try:
+                        (dt,span) = fuzzydate.parse_date(li.cssselect(".seo-h3-datetime")[0].text_content())
+                    except:
+                        #a link with something besides a url (like language dropdown)
+                        continue
+                    # hit a new day?
+                    if dt.year != year or dt.month != month or dt.day != day:
+                        done = True
+                        break
 
-                found.append(a.get('href'))
-                
-                print found
+                    href = a.get('href')
+                    logging.debug('Will scrape: ' + href)
+                    found.append(href)
 
             page += 1
             if page > 200:
