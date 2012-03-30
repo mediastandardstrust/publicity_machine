@@ -1,13 +1,9 @@
 import logging
 import traceback
-import urllib2
+import requests
 from optparse import OptionParser
 import ConfigParser
-import gzip
-import StringIO
-from urllib2helpers import CacheHandler
 from store import Store,DummyStore
-from util import decode_string
 
 
 # TODO: add option to run as a daemon...
@@ -65,12 +61,6 @@ class BaseScraper(object):
 
             self.store = Store(self.name, self.doc_type, auth_user=auth_user, auth_pass=auth_pass, server=server)
 
-
-        if options.cache:
-            logging.info("using .cache")
-            opener = urllib2.build_opener(CacheHandler(".cache"))
-            urllib2.install_opener(opener)
-
         self.go(options)
 
 
@@ -109,17 +99,14 @@ class BaseScraper(object):
                     logging.debug("fetch %s",url)
                     headers = {}
                     headers.update(self.headers)
-                    headers.update(extra_headers)
-                    request = urllib2.Request(url, headers=headers)
-                    response = urllib2.urlopen(request)
-                    content = response.read()
-
-                    (enc, html) = decode_string(content)
+                    if extra_headers:
+                        headers.update(extra_headers)
+                    response = requests.get(url, headers=headers)
 
                     # TODO: maybe just skip ones which redirect to other domains?
-                    if response.geturl() != url:
-                        logging.warning("Redirect detected %s => %s",url,response.geturl())
-                    press_release = self.extract(html, url)
+                    if response.url != url:
+                        logging.warning("Redirect detected %s => %s",url,response.url)
+                    press_release = self.extract(response.text, url)
 
                     # encode text fields
                     # TODO: use isinstance(...,unicode) instead
@@ -128,46 +115,6 @@ class BaseScraper(object):
                             press_release[f] = press_release[f].encode('utf-8')
                     self.store.add(press_release)
             
-                except urllib2.HTTPError as e:
-
-                    try:
-                        logging.debug("fetch (again) %s",url)
-                        headers = {
-                                    "Host":"www.democraticwhip.gov",
-                                    "User-Agent":"Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.2.23) Gecko/20110921 Ubuntu/10.04 (lucid) Firefox/3.6.23",
-                                    "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                                    "Accept-Language":"en-us,en;q=0.5",
-                                    "Accept-Encoding":"gzip,deflate",
-                                    "Accept-Charset":"ISO-8859-1,utf-8;q=0.7,*;q=0.7",
-                                    "Keep-Alive": '115',
-                                    "Connection":"keep-alive",
-                                    "Cookie": "SESSe44492e3eff92ed36c02b54ede745fd0=f8u762lhlmo02lf6s9f1q58s83; has_js=1",
-                                    "If-Modified-Since":"Mon, 05 Mar 2012 21:05:37 GMT",
-                                    "If-None-Match": "80b1e5f8cd8bc5180b65f43da511070c",
-                                    "Cache-Control":"max-age=0",
-                                    "Content-Type":"text/html; charset=utf-8"
-                        }
-                        request = urllib2.Request(self.urls[self.index], headers=headers)
-                        response = urllib2.urlopen(request)
-                        data = StringIO.StringIO(response.read())
-                        html = gzip.GzipFile(fileobj=data).read()
-                        
-                        # TODO: maybe just skip ones which redirect to other domains?
-                        if response.geturl() != url:
-                            logging.warning("Redirect detected %s => %s",url,response.geturl())
-                        press_release = self.extract(html, url)
-
-                        # encode text fields
-                        # TODO: use isinstance(...,unicode) instead
-                        for f in ('url','title','source','text','location','language','topics'):
-                            if f in press_release:
-                                press_release[f] = press_release[f].encode('utf-8')
-                        self.store.add(press_release)
-    
-                    except:
-                        logging.error("failed on %s: %s %s",url,e.__class__,e)
-                        print traceback.print_exc()
-                        err_cnt += 1
                 except Exception as e:
                     logging.error("failed on %s: %s %s",url,e.__class__,e)
                     print traceback.print_exc()
