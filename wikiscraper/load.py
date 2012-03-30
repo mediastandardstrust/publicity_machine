@@ -49,7 +49,7 @@ def processFile(first_docid, filename):
   etree.strip_tags(tree,"a")
   def inclusion_filter(doc):
     return (not doc.get('url', '').endswith(u'_(disambiguation)') 
-            and not doc.get('url', '').startswith(u'List_of')
+            and not u'List_of_' in doc.get('url', '')
             and len(doc.text.strip() >= args.mindoclen))
   (kept, dropped) = bifurcate(inclusion_filter, tree.xpath('//doc'))
   print "Dropped %s of %s documents" % (len(dropped), len(kept) + len(dropped))
