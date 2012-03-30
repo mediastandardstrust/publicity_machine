@@ -2,19 +2,20 @@
 
 import logging
 import re
-from optparse import OptionParser
+import httplib
+from datetime import *
+
+import requests
+
 from readability.readability import Document 
-import urllib2 as  ulib
 from lxml import etree, html
-from churn import util, fuzzydate
-from churn.basescraper import BaseScraper
 from dateutil.parser import parse
 from dateutil.tz import * 
-from datetime import *
+from churn.basescraper import BaseScraper
+from util import condense_whitespace
 
 #this is a list of urls we want to get scrapable links from
 from job_list import rss_feed_no_body
-from util import condense_whitespace
 
 class GenericRSSScraper(BaseScraper):
     name = "generic_rss_scraper"
@@ -34,7 +35,10 @@ class GenericRSSScraper(BaseScraper):
             
             name = article['name']
             url = article['feed_url']
-            feed = etree.parse(ulib.urlopen(url))
+            response = requests.get(url)
+            if response.status_code != httplib.OK:
+                continue
+            feed = etree.fromstring(response.content)
             for item in feed.iter('item'):
                 for link in item.iter('link'):
                     readable_links.append(link.text)
