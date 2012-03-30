@@ -2,11 +2,7 @@
 
 import lxml.html
 import re
-import urllib
-import urllib2
-from datetime import datetime,date,timedelta
 import logging
-from optparse import OptionParser
 import feedparser
 import time
 
