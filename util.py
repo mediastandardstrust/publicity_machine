@@ -60,7 +60,8 @@ RERightSingleQuotes = re.compile(ur'[\u2019\u201A]', re.UNICODE)
 RELeftDoubleQuotes = re.compile(ur'[\u201C\u201F]', re.UNICODE)
 RERightDoubleQuotes = re.compile(ur'[\u201D]', re.UNICODE)
 
-def standardize_quotes(text, leftsnglquot, rightsnglquot, leftdblquot, rightdblquot):
+def standardize_quotes(text, leftsnglquot="'", rightsnglquot="'", leftdblquot='"', rightdblquot='"'):
+    """Replaces fancy quotes from unicode, latin1, and windows-1252, defaulting to ascii quotes."""
     newtext = RELeftSingleQuotes.sub(leftsnglquot, text)
     newtext = RERightSingleQuotes.sub(rightsnglquot, newtext)
     newtext = RELeftDoubleQuotes.sub(leftdblquot, newtext)
