@@ -3,6 +3,7 @@
 import re
 import httplib
 import urllib
+import urlparse
 from datetime import datetime,date,timedelta
 import logging
 import time
@@ -65,7 +66,7 @@ class PRNewsWireScraper(BaseScraper):
 
         logging.debug("read feed %s", feed_url)
         feed = feedparser.parse(feed_url)
-        all_urls = [e.link for e in feed.entries]
+        all_urls = [e.link for e in feed.entries if urlparse.urlparse(e.link).netloc.endswith(u'prnewswire.com')]
         return all_urls
 
 
