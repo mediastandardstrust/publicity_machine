@@ -1,5 +1,6 @@
 import logging
 import traceback
+import urlparse
 import requests
 from optparse import OptionParser
 import ConfigParser
@@ -19,6 +20,8 @@ class BaseScraper(object):
                     of the press release
     """
 
+    require_same_domain = True
+    disallow_redirects = False
     headers = {}
 
     def __init__(self):
@@ -105,7 +108,16 @@ class BaseScraper(object):
 
                     # TODO: maybe just skip ones which redirect to other domains?
                     if response.url != url:
-                        logging.warning("Redirect detected %s => %s",url,response.url)
+                        if self.disallow_redirects == True:
+                            logging.warning("Skipping %s because it redirected to %s", url, response.url)
+                            continue
+                        elif self.require_same_domain == True:
+                            orig_location = urlparse.urlparse(url)
+                            new_location = urlparse.urlparse(response.url)
+                            if orig_location.netloc != new_location.netloc:
+                                logging.warning("Skipping %s because it redirected to another domain: %s", url, response.url)
+                                continue
+
                     press_release = self.extract(response.text, url)
 
                     # encode text fields
