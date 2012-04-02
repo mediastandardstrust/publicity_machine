@@ -50,7 +50,7 @@ def processFile(first_docid, filename):
   def inclusion_filter(doc):
     return (not doc.get('url', '').endswith(u'_(disambiguation)') 
             and not u'List_of_' in doc.get('url', '')
-            and len(doc.text.strip() >= args.mindoclen))
+            and len(doc.text.strip()) >= args.mindoclen)
   (kept, dropped) = bifurcate(inclusion_filter, tree.xpath('//doc'))
   print "Dropped %s of %s documents" % (len(dropped), len(kept) + len(dropped))
   docs = list(enumerate(kept, start=first_docid))
