@@ -111,6 +111,7 @@ class Store:
         try:
             self._sfm.add(doctype=self.doc_type, 
                           docid=doc_id, 
+                          defer=True,
                           **doc)
 
             # great - now update our local record of stored docs
