@@ -6,10 +6,13 @@ from __future__ import division
 import fnmatch
 import os
 import math
+import datetime
 import argparse
 import superfastmatch
 from pprint import pprint
 from lxml import etree
+
+TODAY = datetime.date.today()
 
 parser = argparse.ArgumentParser(description='Load wikipedia articles.')
 parser.add_argument('--verbose', '-v', action='count', help='Print confirmation for each document submitted to the SuperFastMatch server.')
@@ -60,6 +63,8 @@ def processFile(first_docid, filename):
       'id'    : doc.get("id"),
       'title' : text[1],
       'text'  : "\n".join(text[2:]),
+      'source': 'Wikipedia',
+      'date'  : TODAY,
       'url'   : doc.get("url", "").replace("http://it.wikipedia.org","http://en.wikipedia.org")
     }
     add_document(attrs, docid)
