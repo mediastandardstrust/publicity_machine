@@ -57,6 +57,9 @@ def processFile(first_docid, filename):
   (kept, dropped) = bifurcate(inclusion_filter, tree.xpath('//doc'))
   print "Dropped %s of %s documents" % (len(dropped), len(kept) + len(dropped))
   docs = list(enumerate(kept, start=first_docid))
+  if len(docs) == 0:
+      return first_docid
+
   for (docid, doc) in docs:
     text=doc.text.encode('utf-8').split("\n")
     attrs = {
@@ -83,7 +86,7 @@ def main():
   for (filenum, filename) in enumerate(files, start=1):
     print "Processing %s (%s of %s)" % (filename, filenum, len(files))
     previous_docid = processFile(previous_docid + 1, filename)
-  print "Processed all files, waiting for workers to terminate."
+  print "Processed all files. The last docid used was %s." % previous_docid
 
 if __name__ == "__main__":
   main()
