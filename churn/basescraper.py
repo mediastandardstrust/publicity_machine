@@ -109,7 +109,7 @@ class BaseScraper(object):
                     logging.debug("fetch %s",url)
                     headers = {}
                     headers.update(self.headers)
-                    headers.update(extra_headers)
+                    if extra_headers: headers.update(extra_headers)
                     request = urllib2.Request(url, headers=headers)
                     response = urllib2.urlopen(request)
                     content = response.read()
