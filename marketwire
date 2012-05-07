@@ -25,7 +25,7 @@ class MarketwireScraper(BaseScraper):
         feed = feedparser.parse(feed_url)
         all_urls = [e.link for e in feed.entries]
         self.all_urls = all_urls
-        self.dates = [fuzzydate.parse_date(e.date) for e in feed.entries]
+        self.dates = [fuzzydate.parse_date(e.published) for e in feed.entries]
         return all_urls
 
     # output fields:
