@@ -20,7 +20,7 @@ class BaseScraper(object):
                     of the press release
     """
 
-    require_same_domain = True
+    require_same_domain = False
     disallow_redirects = False
     headers = {}
 

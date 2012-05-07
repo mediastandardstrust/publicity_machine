@@ -102,9 +102,11 @@ class GenericRSSScraper(BaseScraper):
             d = re.sub('.*\(.*\)', '', html_body.find_class('releaseDateline')[0].text_content())
 
         #print d
-                        
-
-        date = parse(d)
+        
+        try:                
+            date = parse(d)
+        except:
+            date = datetime.now()
 
         doc = { 'url': link,
                 'title': title,
