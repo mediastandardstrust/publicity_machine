@@ -35,10 +35,32 @@ class GenericRSSScraper(BaseScraper):
             
             name = article['name']
             url = article['feed_url']
-            response = requests.get(url)
+            headers = {
+                    "User-Agent":"Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.2.23) Gecko/20110921 Ubuntu/10.04 (lucid) Firefox/3.6.23",
+                    "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language":"en-us,en;q=0.5",
+                    "Accept-Encoding":"gzip,deflate",
+                    "Accept-Charset":"ISO-8859-1,utf-8;q=0.7,*;q=0.7",
+                    "Keep-Alive": '115',
+                    "Connection":"keep-alive",
+                    "Cookie": "SESSe44492e3eff92ed36c02b54ede745fd0=f8u762lhlmo02lf6s9f1q58s83; has_js=1",
+                    "If-Modified-Since":"Mon, 05 Mar 2012 21:05:37 GMT",
+                    "If-None-Match": "80b1e5f8cd8bc5180b65f43da511070c",
+                    "Cache-Control":"max-age=0",
+                    "Content-Type":"text/html; charset=utf-8"
+            }
+            response = requests.get(url, headers=headers)
             if response.status_code != httplib.OK:
                 continue
-            feed = etree.fromstring(response.content)
+            try:
+                feed = etree.fromstring(response.content)
+            except:
+                print name
+                print url
+                print response.content
+                print "Could not parse xml!"
+                continue 
+
             for item in feed.iter('item'):
                 for link in item.iter('link'):
                     readable_links.append(link.text)
