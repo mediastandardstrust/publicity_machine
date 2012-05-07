@@ -2,6 +2,7 @@
 import lxml.html
 import re
 import datetime
+from dateutil.parser import parse as dateparse
 import time
 import logging
 import feedparser
@@ -74,6 +75,7 @@ class MarketwireScraper(BaseScraper):
       #  date_p = doc.cssselect('#news-date')[0]
        # (fd,span) = fuzzydate.parse_date(date_p.text_content())
        # print date_p.text_content()
+        print "dates"
         print self.dates[self.all_urls.index(url)]
         out['date'] = self.dates[self.all_urls.index(url)]
     #    out['date'] = int(time.mktime(fd.date().timetuple())*1000)

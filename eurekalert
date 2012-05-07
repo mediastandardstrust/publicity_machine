@@ -68,7 +68,8 @@ class EurekalertScraper(BaseScraper):
 
         date_meta = doc.cssselect('head meta[name="date"]')[0]
         (fd,span) = fuzzydate.parse_date(date_meta.get('content'))
-        out['date'] = int(time.mktime(fd.date().timetuple())*1000)
+#        out['date'] = int(time.mktime(fd.date().timetuple())*1000)
+        out['date'] = fd.date().isoformat()
 
 
         # drop everything before main heading
